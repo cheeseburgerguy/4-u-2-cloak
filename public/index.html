@@ -227,14 +227,17 @@
             }
         });
 
-        // --- SERVICE WORKER REGISTRATION (Aligned and simplified to allow uninhibited root resolution) ---
+        // --- SERVICE WORKER REGISTRATION ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js', {
-                    scope: '/'
+                    scope: '/service/'
                 }).then(reg => {
+                    console.log('SW Registration successful with scope:', reg.scope);
                     reg.update();
-                }).catch(err => console.error('SW registration failed:', err));
+                }).catch(err => {
+                    console.error('SW registration failed! The proxy will not work:', err);
+                });
             });
         }
 
