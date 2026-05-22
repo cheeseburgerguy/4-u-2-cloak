@@ -115,6 +115,9 @@
         <aside class="sidebar changelog">
             <h3>Update Log</h3>
             <div class="log-item">
+                <span class="log-version">v1.2.3</span> - Forced script cache-busting variables for Chromebook environments.
+            </div>
+            <div class="log-item">
                 <span class="log-version">v1.2.2</span> - Fixed URLs not loading.
             </div>
             <div class="log-item">
@@ -155,14 +158,19 @@
         </main>
 
     </div>
-    <div class="version-tag">Version v1.2.2</div>
+    <div class="version-tag">Version v1.2.3</div>
 
-    <script src="config.js"></script>
-    <script src="register-sw.js"></script>
-    <script src="search.js"></script>
+    <script src="config.js?v=alpha_FIX"></script>
+    <script src="register-sw.js?v=alpha_FIX"></script>
+    <script src="search.js?v=alpha_FIX"></script>
 
     <script>
-        const CURRENT_VERSION = "v1.2.2";
+        const CURRENT_VERSION = "v1.2.3";
+
+        // Global allocation check for variables 
+        if (typeof __scramjet_config === 'undefined' && typeof _CONFIG !== 'undefined') {
+            window.__scramjet_config = _CONFIG;
+        }
 
         // --- THEME ENGINE MECHANICS (PERSISTENT SAVING) ---
         const themeToggle = document.getElementById('themeToggle');
@@ -186,8 +194,17 @@
         // --- SERVICE WORKER REGISTRATION ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js', {
-                    scope: __scramjet_config.prefix
+                let scopePrefix = '/service/';
+                if (typeof __scramjet_config !== 'undefined' && __scramjet_config.prefix) {
+                    scopePrefix = __scramjet_config.prefix;
+                } else if (typeof _CONFIG !== 'undefined' && _CONFIG.prefix) {
+                    scopePrefix = _CONFIG.prefix;
+                }
+
+                navigator.serviceWorker.register('/sw.js?v=alpha_FIX', {
+                    scope: scopePrefix
+                }).then(reg => {
+                    reg.update();
                 }).catch(err => console.error('Scramjet SW registration failed:', err));
             });
         }
@@ -197,7 +214,6 @@
             const statusText = document.getElementById('proxyStatus');
             const urlInput = document.getElementById('proxyUrlInput');
             const proxyBtn = document.getElementById('proxyBtn');
-            const updateBanner = document.getElementById('updateNotification');
 
             try {
                 const response = await fetch('config.js?t=' + new Date().getTime(), { method: 'GET' });
@@ -207,14 +223,6 @@
                     statusText.className = "note status-up";
                     urlInput.disabled = false;
                     proxyBtn.disabled = false;
-
-                    const htmlResponse = await fetch('index.html?t=' + new Date().getTime());
-                    const htmlText = await htmlResponse.text();
-                    
-                    const versionMatch = htmlText.match(/const CURRENT_VERSION = "([^"]+)"/);
-                    if (versionMatch && versionMatch[1] !== CURRENT_VERSION) {
-                        updateBanner.style.display = "block";
-                    }
                 } else {
                     throw new Error();
                 }
@@ -239,15 +247,12 @@
 
         // --- CORE HELPER: Unified Safe Tab Generator ---
         function generateCloakedTab(targetSrc) {
-            // Open a clean blank tab context
             let newTab = window.open();
             if (!newTab) return alert("Popup blocked! Please allow popups for this website.");
 
-            // Get the current window origin path to correctly format the relative favicon path
             const iconPath = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + 'icon.jpg';
 
             newTab.document.open();
-            // Document write structure directly inside to avoid cross-origin scripting blockades
             newTab.document.write(`
                 <!DOCTYPE html>
                 <html>
@@ -293,13 +298,33 @@
                 if (url.includes('.') && !url.includes(' ')) {
                     url = 'https://' + url;
                 } else {
-                    url = __scramjet_config.search + encodeURIComponent(url);
+                    let searchPrefix = 'https://www.google.com/search?q=%s';
+                    if (typeof __scramjet_config !== 'undefined' && __scramjet_config.search) {
+                        searchPrefix = __scramjet_config.search;
+                    } else if (typeof _CONFIG !== 'undefined' && _CONFIG.search) {
+                        searchPrefix = _CONFIG.search;
+                    }
+                    url = searchPrefix + encodeURIComponent(url);
                 }
             }
 
-            const encodedString = __scramjet_config.encodeUrl(url);
-            const proxiedUrl = window.location.origin + __scramjet_config.prefix + encodedString;
+            let encodedString = url;
+            if (typeof __scramjet_config !== 'undefined' && typeof __scramjet_config.encodeUrl === 'function') {
+                encodedString = __scramjet_config.encodeUrl(url);
+            } else if (typeof _CONFIG !== 'undefined' && typeof _CONFIG.encodeUrl === 'function') {
+                encodedString = _CONFIG.encodeUrl(url);
+            } else {
+                encodedString = btoa(url); 
+            }
 
+            let prefixPath = '/service/';
+            if (typeof __scramjet_config !== 'undefined' && __scramjet_config.prefix) {
+                prefixPath = __scramjet_config.prefix;
+            } else if (typeof _CONFIG !== 'undefined' && _CONFIG.prefix) {
+                prefixPath = _CONFIG.prefix;
+            }
+
+            const proxiedUrl = window.location.origin + prefixPath + encodedString;
             generateCloakedTab(proxiedUrl);
         }
 
@@ -319,7 +344,6 @@
                 newTab.document.write(htmlContent);
                 newTab.document.close();
 
-                // Inject close prevention to file frame cleanly
                 newTab.addEventListener('beforeunload', function (e) {
                     e.preventDefault();
                     e.returnValue = ''; 
@@ -328,6 +352,5 @@
             reader.readAsText(file);
         }
     </script>
-
 </body>
 </html>
