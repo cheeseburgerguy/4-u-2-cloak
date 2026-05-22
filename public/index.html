@@ -115,16 +115,22 @@
         <aside class="sidebar changelog">
             <h3>Update Log</h3>
             <div class="log-item">
-                <span class="log-version">v1.2.3</span> - Forced script cache-busting variables for Chromebook environments.
+                <span class="log-version">v2.3.4</span> - Fixed Scramjet proxy
             </div>
             <div class="log-item">
-                <span class="log-version">v1.2.2</span> - Fixed URLs not loading.
+                <span class="log-version">v2.3.3</span> - Integrated structural fallback encoding mechanics.
             </div>
             <div class="log-item">
-                <span class="log-version">v0.2.2</span> - Updated "Cloak Proxied URL" description, Cloak HTML now supports HTM.
+                <span class="log-version">v2.3.2</span> - Forced script cache-busting variables for Chromebook environments.
             </div>
             <div class="log-item">
-                <span class="log-version">v0.1.2</span> - Added local Scramjet proxy to safely bypass network blocks, Added settings, Added dark mode.
+                <span class="log-version">v1.3.2</span> - Fixed URLs not loading.
+            </div>
+            <div class="log-item">
+                <span class="log-version">v0.3.2</span> - Updated "Cloak Proxied URL" description, Cloak HTML now supports HTM.
+            </div>
+            <div class="log-item">
+                <span class="log-version">v0.2.2</span> - Added Scramjet proxy to safely bypass network blocks, Added settings, Added dark mode.
             </div>
             <div class="log-item">
                 <span class="log-version">v0.1.1</span> - Updated "Cloak URL" description.
@@ -139,7 +145,7 @@
                 <h2>Cloak URL</h2>
                 <input type="text" id="urlInput" placeholder="https://example.com" value="https://example.com">
                 <button onclick="openProtectedIframe()">Open URL</button>
-                <p class="note">Opens a new tab with the link and changes to about:blank (DOES NOT BYPASS ANY BLOCKED WEBSITES AND DOESN'T WORK WITH CERTAIN LINKS such as google.com or tiktok.com)</p>
+                <p class="note">Opens a new tab with the link and changes to about:blank</p>
             </div>
 
             <div class="section">
@@ -158,23 +164,53 @@
         </main>
 
     </div>
-    <div class="version-tag">Version v1.2.3</div>
+    <div class="version-tag">Version v2.3.4</div>
 
-    <script src="config.js?v=alpha_FIX"></script>
-    <script src="register-sw.js?v=alpha_FIX"></script>
-    <script src="search.js?v=alpha_FIX"></script>
-
+    <script src="scramjet.all.js?v=2.3.4"></script>
+    <script src="config.js?v=2.3.4"></script>
+    <script src="register-sw.js?v=2.3.4"></script>
+    <script src="search.js?v=2.3.4"></script>
+    
     <script>
-        const CURRENT_VERSION = "v1.2.3";
+        const CURRENT_VERSION = "v2.3.4";
 
-        // Global allocation check for variables 
-        if (typeof __scramjet_config === 'undefined' && typeof _CONFIG !== 'undefined') {
-            window.__scramjet_config = _CONFIG;
+        // Initialize official Scramjet controller using explicit host origin resolution paths
+        let scramjet;
+        try {
+            if (typeof $scramjetLoadController === 'function') {
+                const { ScramjetController } = $scramjetLoadController();
+                scramjet = new ScramjetController({
+                    files: {
+                        wasm: window.location.origin + "/scramjet.wasm.wasm",
+                        all: window.location.origin + "/scramjet.all.js",
+                        sync: window.location.origin + "/scramjet.sync.js",
+                    }
+                });
+                scramjet.init();
+            }
+        } catch(e) {
+            console.error("Failed to load official Scramjet Controller structure:", e);
         }
 
-        // --- THEME ENGINE MECHANICS (PERSISTENT SAVING) ---
+        // Optimized cipher fallback module to handle strict network isolation structures
+        function encodeUrlFallback(str) {
+            if (!str) return str;
+            try {
+                if (scramjet && typeof scramjet.encodeUrl === 'function') {
+                    return scramjet.encodeUrl(str);
+                }
+                if (typeof Scramjet !== 'undefined' && Scramjet.codec && Scramjet.codec.xor) {
+                    return Scramjet.codec.xor.encode(str);
+                }
+            } catch(e) { console.error("Encoding error:", e); }
+            
+            return btoa(encodeURIComponent(str).split('').map((char, i) => 
+                i % 2 ? String.fromCharCode(char.charCodeAt(0) ^ 2) : char
+            ).join(''));
+        }
+
+        // --- THEME ENGINE MECHANICS ---
         const themeToggle = document.getElementById('themeToggle');
-        
         const currentTheme = localStorage.getItem('theme') || 'light';
         if (currentTheme === 'dark') {
             document.documentElement.setAttribute('data-theme', 'dark');
@@ -191,33 +227,25 @@
             }
         });
 
-        // --- SERVICE WORKER REGISTRATION ---
+        // --- SERVICE WORKER REGISTRATION (Aligned and simplified to allow uninhibited root resolution) ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                let scopePrefix = '/service/';
-                if (typeof __scramjet_config !== 'undefined' && __scramjet_config.prefix) {
-                    scopePrefix = __scramjet_config.prefix;
-                } else if (typeof _CONFIG !== 'undefined' && _CONFIG.prefix) {
-                    scopePrefix = _CONFIG.prefix;
-                }
-
-                navigator.serviceWorker.register('/sw.js?v=alpha_FIX', {
-                    scope: scopePrefix
+                navigator.serviceWorker.register('/sw.js', {
+                    scope: '/'
                 }).then(reg => {
                     reg.update();
-                }).catch(err => console.error('Scramjet SW registration failed:', err));
+                }).catch(err => console.error('SW registration failed:', err));
             });
         }
 
-        // --- AUTOMATED PROXY LIVE & VERSION CHECKER ---
+        // --- AUTOMATED PROXY LIVE CHECKER ---
         async function checkProxyAndVersion() {
             const statusText = document.getElementById('proxyStatus');
             const urlInput = document.getElementById('proxyUrlInput');
             const proxyBtn = document.getElementById('proxyBtn');
 
             try {
-                const response = await fetch('config.js?t=' + new Date().getTime(), { method: 'GET' });
-                
+                const response = await fetch(window.location.origin + '/scramjet.all.js?t=' + new Date().getTime(), { method: 'GET' });
                 if (response.ok) {
                     statusText.textContent = "PROXY UP";
                     statusText.className = "note status-up";
@@ -266,12 +294,6 @@
                 </head>
                 <body>
                     <iframe src="${targetSrc}"></iframe>
-                    <script>
-                        window.addEventListener('beforeunload', function (e) {
-                            e.preventDefault();
-                            e.returnValue = '';
-                        });
-                    <\/script>
                 </body>
                 </html>
             `);
@@ -282,14 +304,13 @@
         function openProtectedIframe() {
             let url = document.getElementById('urlInput').value.trim();
             if (!url) return alert("Invalid URL");
-
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
             generateCloakedTab(url);
         }
 
-        // --- FEATURE 3: Open Proxied Iframe URL (Scramjet Powered) ---
+        // --- FEATURE 3: Open Proxied Iframe URL ---
         function openProxiedIframe() {
             let url = document.getElementById('proxyUrlInput').value.trim();
             if (!url) return alert("Invalid URL");
@@ -298,33 +319,14 @@
                 if (url.includes('.') && !url.includes(' ')) {
                     url = 'https://' + url;
                 } else {
-                    let searchPrefix = 'https://www.google.com/search?q=%s';
-                    if (typeof __scramjet_config !== 'undefined' && __scramjet_config.search) {
-                        searchPrefix = __scramjet_config.search;
-                    } else if (typeof _CONFIG !== 'undefined' && _CONFIG.search) {
-                        searchPrefix = _CONFIG.search;
-                    }
-                    url = searchPrefix + encodeURIComponent(url);
+                    url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
                 }
             }
 
-            let encodedString = url;
-            if (typeof __scramjet_config !== 'undefined' && typeof __scramjet_config.encodeUrl === 'function') {
-                encodedString = __scramjet_config.encodeUrl(url);
-            } else if (typeof _CONFIG !== 'undefined' && typeof _CONFIG.encodeUrl === 'function') {
-                encodedString = _CONFIG.encodeUrl(url);
-            } else {
-                encodedString = btoa(url); 
-            }
-
-            let prefixPath = '/service/';
-            if (typeof __scramjet_config !== 'undefined' && __scramjet_config.prefix) {
-                prefixPath = __scramjet_config.prefix;
-            } else if (typeof _CONFIG !== 'undefined' && _CONFIG.prefix) {
-                prefixPath = _CONFIG.prefix;
-            }
-
-            const proxiedUrl = window.location.origin + prefixPath + encodedString;
+            // Encode the string via our main directory path logic
+            let encodedString = encodeUrlFallback(url);
+            const proxiedUrl = window.location.origin + '/service/' + encodedString;
+            
             generateCloakedTab(proxiedUrl);
         }
 
@@ -343,11 +345,6 @@
                 newTab.document.open();
                 newTab.document.write(htmlContent);
                 newTab.document.close();
-
-                newTab.addEventListener('beforeunload', function (e) {
-                    e.preventDefault();
-                    e.returnValue = ''; 
-                });
             };
             reader.readAsText(file);
         }
