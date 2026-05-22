@@ -115,6 +115,9 @@
         <aside class="sidebar changelog">
             <h3>Update Log</h3>
             <div class="log-item">
+                <span class="log-version">v1.2.2</span> - Fixed URLs not loading.
+            </div>
+            <div class="log-item">
                 <span class="log-version">v0.2.2</span> - Updated "Cloak Proxied URL" description, Cloak HTML now supports HTM.
             </div>
             <div class="log-item">
@@ -152,14 +155,14 @@
         </main>
 
     </div>
-    <div class="version-tag">Version v0.2.2</div>
+    <div class="version-tag">Version v1.2.2</div>
 
     <script src="config.js"></script>
     <script src="register-sw.js"></script>
     <script src="search.js"></script>
 
     <script>
-        const CURRENT_VERSION = "v0.2.2";
+        const CURRENT_VERSION = "v1.2.2";
 
         // --- THEME ENGINE MECHANICS (PERSISTENT SAVING) ---
         const themeToggle = document.getElementById('themeToggle');
@@ -216,7 +219,6 @@
                     throw new Error();
                 }
             } catch (error) {
-                // Dynamically updates status to your exact text configuration
                 statusText.textContent = "PROXY DOWN WAIT FOR 30-50 SECONDS";
                 statusText.className = "note status-down";
                 urlInput.disabled = true;
@@ -235,45 +237,51 @@
             }
         });
 
-        // --- HELPER: Inject Close Prevention into Child Tabs ---
-        function applyClosePrevention(targetWindow) {
-            targetWindow.addEventListener('beforeunload', function (e) {
-                e.preventDefault();
-                e.returnValue = ''; 
-            });
+        // --- CORE HELPER: Unified Safe Tab Generator ---
+        function generateCloakedTab(targetSrc) {
+            // Open a clean blank tab context
+            let newTab = window.open();
+            if (!newTab) return alert("Popup blocked! Please allow popups for this website.");
+
+            // Get the current window origin path to correctly format the relative favicon path
+            const iconPath = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + 'icon.jpg';
+
+            newTab.document.open();
+            // Document write structure directly inside to avoid cross-origin scripting blockades
+            newTab.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>about:blank</title>
+                    <link rel="icon" type="image/jpg" href="${iconPath}">
+                    <style>
+                        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
+                        iframe { width: 100%; height: 100%; border: none; margin: 0; padding: 0; display: block; }
+                    </style>
+                </head>
+                <body>
+                    <iframe src="${targetSrc}"></iframe>
+                    <script>
+                        window.addEventListener('beforeunload', function (e) {
+                            e.preventDefault();
+                            e.returnValue = '';
+                        });
+                    <\/script>
+                </body>
+                </html>
+            `);
+            newTab.document.close();
         }
 
-        // --- HELPER: Inject Favicon into Child Tabs ---
-        function applyFavicon(targetWindow) {
-            if (!targetWindow.document.head) {
-                let head = targetWindow.document.createElement('head');
-                targetWindow.document.documentElement.appendChild(head);
-            }
-            let icon = targetWindow.document.createElement('link');
-            icon.rel = 'icon';
-            icon.type = 'image/jpg';
-            icon.href = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + 'icon.jpg';
-            targetWindow.document.head.appendChild(icon);
-        }
-
-        // --- FEATURE 2: Open Iframe URL (Original Clean Version) ---
+        // --- FEATURE 2: Open Iframe URL ---
         function openProtectedIframe() {
-            let url = document.getElementById('urlInput').value;
+            let url = document.getElementById('urlInput').value.trim();
             if (!url) return alert("Invalid URL");
 
-            let newTab = window.open('about:blank');
-            newTab.document.body.style.margin = '0';
-            
-            let iframe = newTab.document.createElement('iframe');
-            iframe.style.width = '100vw';
-            iframe.style.height = '100vh';
-            iframe.style.border = 'none';
-            iframe.src = url;
-            
-            newTab.document.body.appendChild(iframe);
-
-            applyClosePrevention(newTab);
-            applyFavicon(newTab);
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            generateCloakedTab(url);
         }
 
         // --- FEATURE 3: Open Proxied Iframe URL (Scramjet Powered) ---
@@ -292,19 +300,7 @@
             const encodedString = __scramjet_config.encodeUrl(url);
             const proxiedUrl = window.location.origin + __scramjet_config.prefix + encodedString;
 
-            let newTab = window.open('about:blank');
-            newTab.document.body.style.margin = '0';
-            
-            let iframe = newTab.document.createElement('iframe');
-            iframe.style.width = '100vw';
-            iframe.style.height = '100vh';
-            iframe.style.border = 'none';
-            iframe.src = proxiedUrl; 
-            
-            newTab.document.body.appendChild(iframe);
-
-            applyClosePrevention(newTab);
-            applyFavicon(newTab);
+            generateCloakedTab(proxiedUrl);
         }
 
         // --- FEATURE 4: Open Local HTML File ---
@@ -316,14 +312,18 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const htmlContent = e.target.result;
-                let newTab = window.open('about:blank');
+                let newTab = window.open();
+                if(!newTab) return alert("Popup blocked!");
                 
                 newTab.document.open();
                 newTab.document.write(htmlContent);
                 newTab.document.close();
 
-                applyClosePrevention(newTab);
-                applyFavicon(newTab);
+                // Inject close prevention to file frame cleanly
+                newTab.addEventListener('beforeunload', function (e) {
+                    e.preventDefault();
+                    e.returnValue = ''; 
+                });
             };
             reader.readAsText(file);
         }
