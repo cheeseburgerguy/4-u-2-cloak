@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4 u 2 cloak</title>
+    
+    <link rel="icon" type="image/jpg" href="icon.jpg">
+
+    <style>
+        /* Base Light Theme Variables */
+        :root {
+            --bg-color: #f4f4f9;
+            --text-color: #333333;
+            --section-bg: #ffffff;
+            --border-color: #d0d7de;
+            --note-color: #666666;
+            --box-shadow: rgba(0,0,0,0.1);
+            --sidebar-bg: #eef2f7;
+            --input-bg: #ffffff;
+            --input-text: #000000;
+            --disabled-bg: #f0f0f0;
+            --disabled-text: #888888;
+        }
+
+        /* Dark Theme Variables */
+        [data-theme="dark"] {
+            --bg-color: #1e1e24;
+            --text-color: #f0f6fc;
+            --section-bg: #0d1117;
+            --border-color: #30363d;
+            --note-color: #8b949e;
+            --box-shadow: rgba(0,0,0,0.5);
+            --sidebar-bg: #161b22;
+            --input-bg: #21262d;
+            --input-text: #c9d1d9;
+            --disabled-bg: #161b22;
+            --disabled-text: #484f58;
+        }
+
+        body { font-family: sans-serif; padding: 20px; margin: auto; background: var(--bg-color); color: var(--text-color); max-width: 1000px; position: relative; min-height: 95vh; transition: background 0.3s, color 0.3s;}
+        
+        /* Version Update Notification Banner */
+        .update-banner { display: none; background: #0066cc; color: white; padding: 12px; text-align: center; font-weight: bold; border-radius: 6px; margin-bottom: 20px; box-shadow: 0 2px 4px var(--box-shadow); cursor: pointer; }
+        .update-banner:hover { background: #0052a3; }
+
+        /* Flexbox layout container to split screen */
+        .container { display: flex; gap: 20px; align-items: flex-start; margin-top: 20px; padding-bottom: 40px; }
+        
+        /* Left column for the Update Log */
+        .sidebar { flex: 1; min-width: 250px; background: var(--sidebar-bg); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px var(--box-shadow); }
+        
+        /* Right column for the Main Content */
+        .main-content { flex: 2; min-width: 300px; }
+        
+        .section { background: var(--section-bg); padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px var(--box-shadow); border: 1px solid var(--border-color); }
+        input[type="text"], input[type="file"] { width: 100%; padding: 8px; margin: 10px 0; box-sizing: border-box; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--border-color); border-radius: 4px; }
+        button { padding: 10px 15px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0052a3; }
+        button:disabled { background: #cccccc !important; color: #666666 !important; cursor: not-allowed; }
+        
+        /* Dark mode overrides for disabled states */
+        [data-theme="dark"] button:disabled { background: #30363d !important; color: #484f58 !important; }
+        input:disabled { background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; }
+        
+        .note { font-size: 0.85em; color: var(--note-color); margin-top: 5px; }
+        .toggle-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 4px; color: #333333; }
+        [data-theme="dark"] .toggle-box { background: #2d2613; border-left: 4px solid #ffc107; color: #f0f6fc; }
+        
+        .status-down { color: #cc0000; font-weight: bold; }
+        .status-up { color: #008800; font-weight: bold; }
+        [data-theme="dark"] .status-down { color: #ff6b6b; }
+        [data-theme="dark"] .status-up { color: #4af24a; }
+        
+        /* Update Log Styling */
+        .changelog h3 { margin-top: 0; color: var(--text-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        .log-item { margin-bottom: 12px; font-size: 0.9em; line-height: 1.4; }
+        .log-version { font-weight: bold; color: #0066cc; }
+
+        /* Bottom Right Version Indicator */
+        .version-tag { position: fixed; bottom: 15px; right: 20px; font-size: 0.8em; color: var(--note-color); background: var(--bg-color); padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+
+        /* Responsive layout for mobile devices */
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            .sidebar, .main-content { width: 100%; }
+            .version-tag { position: static; text-align: right; margin-top: 20px; display: block; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="updateNotification" class="update-banner" onclick="window.location.reload(true)">
+        Refresh page/website to update to newest version
+    </div>
+
+    <div class="toggle-box">
+        <label>
+            <input type="checkbox" id="mainPageToggle" checked>
+            <strong>Close Prevention</strong>
+        </label>
+        <p class="note">If checked, trying to close this website will prevent/trigger a warning (requires a click first)</p>
+    </div>
+
+    <div class="section" style="padding: 15px; margin-bottom: 20px;">
+        <h3 style="margin: 0 0 10px 0;">Settings</h3>
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="themeToggle">
+            <strong>Dark Mode</strong>
+        </label>
+    </div>
+
+    <div class="container">
+        
+        <aside class="sidebar changelog">
+            <h3>Update Log</h3>
+            <div class="log-item">
+                <span class="log-version">v0.2.2</span> - Updated "Cloak Proxied URL" description.
+            </div>
+            <div class="log-item">
+                <span class="log-version">v0.1.2</span> - Added local Scramjet proxy to safely bypass network blocks, Added settings, Added dark mode.
+            </div>
+            <div class="log-item">
+                <span class="log-version">v0.1.1</span> - Updated "Cloak URL" description.
+            </div>
+            <div class="log-item">
+                <span class="log-version">v0.0.1</span> - 4-u-2-cloak released.
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="section">
+                <h2>Cloak URL</h2>
+                <input type="text" id="urlInput" placeholder="https://example.com" value="https://example.com">
+                <button onclick="openProtectedIframe()">Open URL</button>
+                <p class="note">Opens a new tab with the link and changes to about:blank (DOES NOT BYPASS ANY BLOCKED WEBSITES AND DOESN'T WORK WITH CERTAIN LINKS such as google.com or tiktok.com)</p>
+            </div>
+
+            <div class="section">
+                <h2>Cloak Proxied URL</h2>
+                <input type="text" id="proxyUrlInput" placeholder="https://example.com" value="https://example.com" disabled>
+                <button id="proxyBtn" onclick="openProxiedIframe()" disabled>Open Proxied URL</button>
+                <p class="note" id="proxyStatus">Checking proxy status...</p>
+            </div>
+
+            <div class="section">
+                <h2>Cloak HTML</h2>
+                <input type="file" id="htmlFileInput" accept=".html, .htm">
+                <button onclick="openProtectedFile()">Open File</button>
+                <p class="note">Opens a new tab with the HTML in it but about:blank</p>
+            </div>
+        </main>
+
+    </div>
+    <div class="version-tag">Version v0.2.2</div>
+
+    <script src="config.js"></script>
+    <script src="register-sw.js"></script>
+    <script src="search.js"></script>
+
+    <script>
+        const CURRENT_VERSION = "v0.2.2";
+
+        // --- THEME ENGINE MECHANICS (PERSISTENT SAVING) ---
+        const themeToggle = document.getElementById('themeToggle');
+        
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        if (currentTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.checked = true;
+        }
+
+        themeToggle.addEventListener('change', function(e) {
+            if (e.target.checked) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // --- SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js', {
+                    scope: __scramjet_config.prefix
+                }).catch(err => console.error('Scramjet SW registration failed:', err));
+            });
+        }
+
+        // --- AUTOMATED PROXY LIVE & VERSION CHECKER ---
+        async function checkProxyAndVersion() {
+            const statusText = document.getElementById('proxyStatus');
+            const urlInput = document.getElementById('proxyUrlInput');
+            const proxyBtn = document.getElementById('proxyBtn');
+            const updateBanner = document.getElementById('updateNotification');
+
+            try {
+                const response = await fetch('config.js?t=' + new Date().getTime(), { method: 'GET' });
+                
+                if (response.ok) {
+                    statusText.textContent = "PROXY UP";
+                    statusText.className = "note status-up";
+                    urlInput.disabled = false;
+                    proxyBtn.disabled = false;
+
+                    const htmlResponse = await fetch('index.html?t=' + new Date().getTime());
+                    const htmlText = await htmlResponse.text();
+                    
+                    const versionMatch = htmlText.match(/const CURRENT_VERSION = "([^"]+)"/);
+                    if (versionMatch && versionMatch[1] !== CURRENT_VERSION) {
+                        updateBanner.style.display = "block";
+                    }
+                } else {
+                    throw new Error();
+                }
+            } catch (error) {
+                // Dynamically updates status to your exact text configuration
+                statusText.textContent = "PROXY DOWN WAIT FOR 30-50 SECONDS";
+                statusText.className = "note status-down";
+                urlInput.disabled = true;
+                proxyBtn.disabled = true;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', checkProxyAndVersion);
+
+        // --- FEATURE 1: Main Page Close Prevention ---
+        window.addEventListener('beforeunload', function (e) {
+            const isMainProtectionEnabled = document.getElementById('mainPageToggle').checked;
+            if (isMainProtectionEnabled) {
+                e.preventDefault();
+                e.returnValue = ''; 
+            }
+        });
+
+        // --- HELPER: Inject Close Prevention into Child Tabs ---
+        function applyClosePrevention(targetWindow) {
+            targetWindow.addEventListener('beforeunload', function (e) {
+                e.preventDefault();
+                e.returnValue = ''; 
+            });
+        }
+
+        // --- HELPER: Inject Favicon into Child Tabs ---
+        function applyFavicon(targetWindow) {
+            if (!targetWindow.document.head) {
+                let head = targetWindow.document.createElement('head');
+                targetWindow.document.documentElement.appendChild(head);
+            }
+            let icon = targetWindow.document.createElement('link');
+            icon.rel = 'icon';
+            icon.type = 'image/jpg';
+            icon.href = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + 'icon.jpg';
+            targetWindow.document.head.appendChild(icon);
+        }
+
+        // --- FEATURE 2: Open Iframe URL (Original Clean Version) ---
+        function openProtectedIframe() {
+            let url = document.getElementById('urlInput').value;
+            if (!url) return alert("Invalid URL");
+
+            let newTab = window.open('about:blank');
+            newTab.document.body.style.margin = '0';
+            
+            let iframe = newTab.document.createElement('iframe');
+            iframe.style.width = '100vw';
+            iframe.style.height = '100vh';
+            iframe.style.border = 'none';
+            iframe.src = url;
+            
+            newTab.document.body.appendChild(iframe);
+
+            applyClosePrevention(newTab);
+            applyFavicon(newTab);
+        }
+
+        // --- FEATURE 3: Open Proxied Iframe URL (Scramjet Powered) ---
+        function openProxiedIframe() {
+            let url = document.getElementById('proxyUrlInput').value.trim();
+            if (!url) return alert("Invalid URL");
+
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                if (url.includes('.') && !url.includes(' ')) {
+                    url = 'https://' + url;
+                } else {
+                    url = __scramjet_config.search + encodeURIComponent(url);
+                }
+            }
+
+            const encodedString = __scramjet_config.encodeUrl(url);
+            const proxiedUrl = window.location.origin + __scramjet_config.prefix + encodedString;
+
+            let newTab = window.open('about:blank');
+            newTab.document.body.style.margin = '0';
+            
+            let iframe = newTab.document.createElement('iframe');
+            iframe.style.width = '100vw';
+            iframe.style.height = '100vh';
+            iframe.style.border = 'none';
+            iframe.src = proxiedUrl; 
+            
+            newTab.document.body.appendChild(iframe);
+
+            applyClosePrevention(newTab);
+            applyFavicon(newTab);
+        }
+
+        // --- FEATURE 4: Open Local HTML File ---
+        function openProtectedFile() {
+            const fileInput = document.getElementById('htmlFileInput');
+            const file = fileInput.files[0];
+            if (!file) return alert("Choose an HTML file");
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const htmlContent = e.target.result;
+                let newTab = window.open('about:blank');
+                
+                newTab.document.open();
+                newTab.document.write(htmlContent);
+                newTab.document.close();
+
+                applyClosePrevention(newTab);
+                applyFavicon(newTab);
+            };
+            reader.readAsText(file);
+        }
+    </script>
+
+</body>
+</html>
