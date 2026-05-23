@@ -1,27 +1,90 @@
-<!doctype html>
-<html>
-	<head>
-		<meta charset="utf-8" />
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1.0, shrink-to-fit=no"
-		/>
-		<title>Scramjet | Error</title>
-		<base href="/" />
-		<link rel="shortcut icon" content="favicon.ico" />
-		<link rel="stylesheet" href="index.css" />
-	</head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    
+    <link rel="icon" type="image/jpg" href="icon.jpg">
 
-	<body>
-		<div class="logo-wrapper left-margin">
-			<h1>Scramjet | Error</h1>
-		</div>
-		<div class="desc left-margin">
-			<p>The server could not route your request.</p>
-		</div>
-		<footer>
-			<a title="License information" href="credits.html">Credits</a>
-			<span>Scramjet &copy; MW 2025</span>
-		</footer>
-	</body>
+    <style>
+        /* Base Light Theme Variables */
+        :root {
+            --bg-color: #f4f4f9;
+            --text-color: #333333;
+            --section-bg: #ffffff;
+            --border-color: #d0d7de;
+            --note-color: #666666;
+            --box-shadow: rgba(0,0,0,0.1);
+        }
+
+        /* Dark Theme Variables */
+        [data-theme="dark"] {
+            --bg-color: #1e1e24;
+            --text-color: #f0f6fc;
+            --section-bg: #0d1117;
+            --border-color: #30363d;
+            --note-color: #8b949e;
+            --box-shadow: rgba(0,0,0,0.5);
+        }
+
+        body {
+            font-family: sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .error-container {
+            background: var(--section-bg);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px var(--box-shadow);
+            border: 1px solid var(--border-color);
+            max-width: 450px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 5em;
+            margin: 0;
+            color: #0066cc;
+        }
+
+        h2 {
+            margin-top: 10px;
+            font-size: 1.8em;
+        }
+
+        p {
+            color: var(--note-color);
+            line-height: 1.5;
+            margin: 0; /* Removed bottom margin since the button is gone */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="error-container">
+        <h1>404</h1>
+        <h2>Page could not be loaded</h2>
+        <p>The link you tried opening could not be opened with scramjet proxy. Please try again or email guyuser1232@gmail.com</p>
+    </div>
+
+    <script>
+        // Automatically check the user's saved theme from index.html and apply it here
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        if (currentTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
+
+</body>
 </html>
