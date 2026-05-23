@@ -166,6 +166,7 @@
     </div>
     <div class="version-tag">Version v2.3.4</div>
 
+    <script src="baremux/index.js" defer></script>
     <script src="scramjet.all.js?v=2.3.4"></script>
     <script src="config.js?v=2.3.4"></script>
     <script src="register-sw.js?v=2.3.4"></script>
@@ -181,9 +182,9 @@
                 const { ScramjetController } = $scramjetLoadController();
                 scramjet = new ScramjetController({
                     files: {
-                        wasm: window.location.origin + "/scramjet.wasm.wasm",
-                        all: window.location.origin + "/scramjet.all.js",
-                        sync: window.location.origin + "/scramjet.sync.js",
+                        wasm: "/scramjet.wasm.wasm",
+                        all: "/scramjet.all.js",
+                        sync: "/scramjet.sync.js",
                     }
                 });
                 scramjet.init();
@@ -192,7 +193,7 @@
             console.error("Failed to load official Scramjet Controller structure:", e);
         }
 
-        // Optimized cipher fallback module to handle strict network isolation structures
+        // Optimized cipher fallback module
         function encodeUrlFallback(str) {
             if (!str) return str;
             try {
@@ -288,8 +289,8 @@
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>about:blank</title>
-                    <link rel="icon" type="image/jpg" href="${iconPath}">
+                    <title>Google Drive</title>
+                    <link rel="icon" type="image/png" href="https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png">
                     <style>
                         html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
                         iframe { width: 100%; height: 100%; border: none; margin: 0; padding: 0; display: block; }
@@ -313,11 +314,12 @@
             generateCloakedTab(url);
         }
 
-        // --- FEATURE 3: Open Proxied Iframe URL ---
-        function openProxiedIframe() {
+        // --- FEATURE 3: Open Proxied Iframe URL (NOW USES SCRAMJET + BAREMUX) ---
+        async function openProxiedIframe() {
             let url = document.getElementById('proxyUrlInput').value.trim();
             if (!url) return alert("Invalid URL");
 
+            // Process search/url logic
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 if (url.includes('.') && !url.includes(' ')) {
                     url = 'https://' + url;
@@ -326,11 +328,60 @@
                 }
             }
 
-            // Encode the string via our main directory path logic
-            let encodedString = encodeUrlFallback(url);
-            const proxiedUrl = window.location.origin + '/service/' + encodedString;
-            
-            generateCloakedTab(proxiedUrl);
+            try {
+                // Setup the Wisp/Baremux connection (required for Scramjet frames to have internet)
+                if (typeof BareMux !== 'undefined') {
+                    const connection = new BareMux.BareMuxConnection("/baremux/worker.js");
+                    let wispUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
+                    
+                    if ((await connection.getTransport()) !== "/libcurl/index.mjs") {
+                        await connection.setTransport("/libcurl/index.mjs", [{ websocket: wispUrl }]);
+                    }
+                } else {
+                    console.warn("BareMux is missing! Network connections might fail.");
+                }
+
+                // If Scramjet controller successfully loaded, use its internal iframe builder!
+                if (scramjet && typeof scramjet.createFrame === 'function') {
+                    const frame = scramjet.createFrame();
+                    frame.frame.id = "sj-frame";
+
+                    // Open cloaked tab
+                    let cloakedWindow = window.open('about:blank', '_blank');
+                    if (!cloakedWindow) return alert("Pop-up blocker prevented the tab from opening.");
+                    
+                    let doc = cloakedWindow.document;
+                    
+                    // Make it fullscreen inside the blank tab
+                    frame.frame.style.width = '100vw';
+                    frame.frame.style.height = '100vh';
+                    frame.frame.style.border = 'none';
+                    frame.frame.style.margin = '0';
+                    frame.frame.style.padding = '0';
+                    
+                    doc.body.style.margin = '0';
+                    doc.body.style.overflow = 'hidden'; 
+                    doc.title = "Google Drive"; 
+                    
+                    let link = doc.createElement('link');
+                    link.rel = 'icon';
+                    link.href = 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png';
+                    doc.head.appendChild(link);
+
+                    // Inject the official Scramjet iframe and go!
+                    doc.body.appendChild(frame.frame);
+                    frame.go(url);
+                } else {
+                    // Fallback to standard URL routing if Scramjet Frame object is broken
+                    console.log("Using fallback URL routing instead of createFrame.");
+                    let encodedString = encodeUrlFallback(url);
+                    const proxiedUrl = window.location.origin + '/service/' + encodedString;
+                    generateCloakedTab(proxiedUrl);
+                }
+            } catch (err) {
+                console.error("Proxy connection error:", err);
+                alert("The proxy router crashed. Check the console (F12).");
+            }
         }
 
         // --- FEATURE 4: Open Local HTML File ---
